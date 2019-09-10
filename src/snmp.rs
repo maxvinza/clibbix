@@ -1,6 +1,7 @@
 use std::{
     io::self,
     thread,
+    convert::TryInto,
     time::{
         Duration,
         SystemTime,
@@ -13,7 +14,6 @@ use snmp::{
 };
 
 use tsdb::{
-    Sql,
     SqlError,
     SqlOperations,
     Report,
@@ -37,10 +37,10 @@ pub type Result<T> = std::result::Result<T, SNMPError>;
 
 
 const TIMEOUT: Duration = Duration::from_secs(2);
-const LOOP_TIME: Duration = Duration::from_secs(8);
 
 
 pub fn snmp_loop(config: &Config) -> Result<()> {
+    let sleep_time = Duration::from_secs(config.loop_time.try_into().unwrap_or(60));
     loop {
         for device in &config.devices {
             let agent_addr = &format!("{}:161", &device.ip);
@@ -64,13 +64,12 @@ pub fn snmp_loop(config: &Config) -> Result<()> {
 
                     let mut report = Report::default();
                     report.data_start = unix_time.as_secs() as i64;
-                    report.data = snmp_response as i64;
+                    report.data = i64::from(snmp_response);
                     report.id_parameter = mib.id_db;
                     report.push_sql()?;
                 }
             }
         }
-        thread::sleep(LOOP_TIME);
+        thread::sleep(sleep_time);
     }
-    Ok(())
 }

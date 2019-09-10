@@ -20,6 +20,7 @@ use tsdb::{
 #[derive(Debug, Default)]
 pub struct Config {
     pub devices: Vec<Device>,
+    pub loop_time: usize,
 }
 
 
@@ -30,7 +31,8 @@ pub struct Device {
     pub mibs: Vec<Mib>,
 }
 
-
+///Stuct of one parameter of monitoring
+///devision - coefficient by which reports are divided
 #[derive(Debug, Default)]
 pub struct Mib {
     pub name: String,
@@ -61,6 +63,7 @@ impl Config {
         let mut device = Device::default();
         let mut is_first = true;
         let mut config = Config::default();
+        config.loop_time = 60;//default polling interval
         loop {
             buffer.clear();
             if reader.read_line(&mut buffer)? == 0 {
