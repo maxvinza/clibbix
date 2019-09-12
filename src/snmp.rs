@@ -10,7 +10,13 @@ use std::{
 };
 use snmp::{
     SyncSession,
-    Value
+    Value::{
+        Integer,
+        Counter32,
+        Unsigned32,
+        Timeticks,
+        Counter64,
+    },
 };
 
 use tsdb::{
@@ -58,13 +64,23 @@ pub fn snmp_loop(config: &Config) -> Result<()> {
                     _ => continue,
                 };
 
-                if let Some((_oid, Value::Counter32(snmp_response))) = response.varbinds.next() {
+                if let Some((_oid, value)) = response.varbinds.next() {
+                    //Value::Counter32(snmp_response)
+                    let snmp_response: i64 = match value {
+                        Integer(v) => v,
+                        Counter32(v) => v as i64,
+                        Unsigned32(v) => v as i64,
+                        Timeticks(v) => v as i64,
+                        Counter64(v) => v as i64,
+                        _ => 0,
+                    };
+
                     println!("output: {}", snmp_response);
                     let unix_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
 
                     let mut report = Report::default();
                     report.data_start = unix_time.as_secs() as i64;
-                    report.data = i64::from(snmp_response);
+                    report.data = snmp_response;
                     report.id_parameter = mib.id_db;
                     report.push_sql()?;
                 }
