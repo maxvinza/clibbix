@@ -8,5 +8,6 @@ edition = "2018"
 
 [dependencies]
 snmp = "0.2.2"
+chrono = "0.4"
 tsdb = { path = "../libtsdb" }
 error-rules = "0.2"

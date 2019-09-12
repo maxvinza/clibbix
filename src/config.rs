@@ -20,7 +20,7 @@ use tsdb::{
 #[derive(Debug, Default)]
 pub struct Config {
     pub devices: Vec<Device>,
-    pub loop_time: usize,
+    pub loop_time: i64,
 }
 
 
@@ -33,13 +33,26 @@ pub struct Device {
 
 ///Stuct of one parameter of monitoring
 ///devision - coefficient by which reports are divided
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Mib {
     pub name: String,
     units: String,
     pub oid: Vec<u32>,
-    pub devision: usize,
+    pub devision: i64,
     pub id_db: i64,
+}
+
+
+impl Default for Mib {
+    fn default() -> Self {
+        Self {
+            name: String::default(),
+            units: String::default(),
+            oid: Vec::new(),
+            devision: 1,
+            id_db: 0,
+        }
+    }
 }
 
 
@@ -99,7 +112,7 @@ impl Config {
                             }
                         },
                         "units" => mib.units = String::from(value),
-                        "devision" => mib.devision = value.parse::<usize>().unwrap_or(1),
+                        "devision" => mib.devision = value.parse::<i64>().unwrap_or(1),
                         _ => {},
                     }
                 }
