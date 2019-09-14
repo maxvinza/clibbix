@@ -18,7 +18,7 @@ pub use crate::output::*;
 
 fn main() {
     let mut config = Config::new().unwrap();
-    let mut printoption = PrintOption::default();
+    let mut printoption = PrintOption::new().unwrap();
 
     config.make_tsbd().unwrap();
 

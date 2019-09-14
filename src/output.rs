@@ -52,24 +52,22 @@ pub struct PrintOption {
 }
 
 
-impl Default for PrintOption {
-    fn default() -> Self {
-        Self {
+impl PrintOption {
+    pub fn new() -> Result<Self> {
+        let lats_time = unix_time()?;
+        let first_time = lats_time - 3600;
+        Ok(Self {
             need_print: false,
             device: String::default(),
             parameter: String::default(),
-            first_time: 1,
-            lats_time: 1,
+            first_time,
+            lats_time,
             num_reports: 10,
-        }
+        })
     }
-}
 
-
-impl PrintOption {
     pub fn set_time(&mut self, time: i64) -> Result<()> {
-        let unix_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
-        self.lats_time = unix_time.as_secs().try_into()?;
+        self.lats_time = unix_time()?;
         self.first_time = self.lats_time - time * 60;
         Ok(())
     }
@@ -120,4 +118,11 @@ impl PrintOption {
         }
         Ok(())
     }
+}
+
+
+fn unix_time() -> Result<i64> {
+    let unix_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
+    let time: i64 = unix_time.as_secs().try_into()?;
+    Ok(time)
 }
