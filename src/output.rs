@@ -114,7 +114,7 @@ impl PrintOption {
                 let datetime = DateTime::<Utc>::from(d);
                 // Formats the combined date and time with the specified format string.
                 let timestamp_str = datetime.format("%Y-%m-%d %H:%M:%S").to_string();
-                println!("{} -> {}", timestamp_str, report.data / devision);
+                println!("{} -> {}", timestamp_str, report.data as f32 / devision as f32);
                 last_report_time = report.data_start;
             }
         }
