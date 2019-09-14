@@ -1,5 +1,0 @@
-2) некорректная работа при пустой строке в конце конфига
-3) Проблема со множественными подключениям к БД
-./target/debug/clibbix -dev sv-ryb-36-1-t1 -t week
-thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Error { code: Some(5), message: Some("database is locked") }', src/libcore/result.rs:999:5
-note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace.

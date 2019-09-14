@@ -116,7 +116,10 @@ impl Config {
                         _ => {},
                     }
                 }
-                device.mibs.push(mib);
+                
+                if mib.name != String::default() {
+                    device.mibs.push(mib);
+                }
             }
         }
         config.devices.push(device);
