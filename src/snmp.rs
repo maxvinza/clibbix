@@ -20,8 +20,8 @@ use snmp::{
 };
 
 use tsdb::{
-    SqlError,
-    SqlOperations,
+    TSDB,
+    TSDBError,
     Report,
 };
 
@@ -33,7 +33,7 @@ pub enum SNMPError {
     #[error_from("Config IO: {}", 0)]
     Io(io::Error),
     #[error_from("Config: {}", 0)]
-    Sql(SqlError),
+    TSDB(TSDBError),
     #[error_from("Config: {}", 0)]
     SystemTime(SystemTimeError),
 }
@@ -47,6 +47,8 @@ const TIMEOUT: Duration = Duration::from_secs(2);
 
 pub fn snmp_loop(config: &Config) -> Result<()> {
     let sleep_time = Duration::from_secs(config.loop_time.try_into().unwrap_or(60));
+    let mut tsdb = TSDB::new().unwrap();
+
     loop {
         for device in &config.devices {
             let agent_addr = &format!("{}:161", &device.ip);
@@ -82,7 +84,7 @@ pub fn snmp_loop(config: &Config) -> Result<()> {
                     report.data_start = unix_time.as_secs() as i64;
                     report.data = snmp_response;
                     report.id_parameter = mib.id_db;
-                    report.push_sql()?;
+                    tsdb.push_sql(&mut report)?;
                 }
             }
         }

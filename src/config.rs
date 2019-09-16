@@ -8,9 +8,8 @@ use std::{
 };
 
 use tsdb::{
-    Sql,
-    SqlError,
-    SqlOperations,
+    TSDB,
+    TSDBError,
     Parameter,
     ParameterType,
     Object,
@@ -61,7 +60,7 @@ pub enum ConfigError {
     #[error_from("Config IO: {}", 0)]
     Io(io::Error),
     #[error_from("Config: {}", 0)]
-    Sql(SqlError),
+    TSDB(TSDBError),
 }
 
 
@@ -128,19 +127,19 @@ impl Config {
 
     pub fn make_tsbd(&mut self) -> Result<()> {
         for device in &mut self.devices {
-            let mut sql = Sql::new()?;
-            sql.new_base();
+            let mut tsdb = TSDB::new().unwrap();
+            tsdb.sql.new_base();
             let mut object = Object::default();
             object.name = device.ip.clone();
-            object.push_sql()?;
+            tsdb.push_sql(&mut object)?;
             for mib in &mut device.mibs {
                 let mut parametertype = ParameterType::default();
                 parametertype.name = mib.name.clone();
                 parametertype.units = mib.units.clone();
                 parametertype.aproxy_time = 60;
-                parametertype.push_sql()?;
+                tsdb.push_sql(&mut parametertype)?;
                 let mut parameter = Parameter::new(&parametertype, &object);
-                parameter.push_sql()?;
+                tsdb.push_sql(&mut parameter)?;
                 mib.id_db = parameter.id;
             }
         }

@@ -15,8 +15,8 @@ use std::{
     }
 };
 use tsdb::{
-    SqlError,
-    SqlOperations,
+    TSDB,
+    TSDBError,
     Report,
 };
 
@@ -31,7 +31,7 @@ pub enum OutputError {
     #[error_from("Output IO: {}", 0)]
     Io(io::Error),
     #[error_from("Output: {}", 0)]
-    Sql(SqlError),
+    TSDB(TSDBError),
     #[error_from("Config: {}", 0)]
     SystemTime(SystemTimeError),
     #[error_from("Config: {}", 0)]
@@ -98,12 +98,13 @@ impl PrintOption {
     pub fn printreport(&mut self, mib: &Mib) -> Result<()> {
         println!("Parameter: {}", mib.name);
         let mut last_report_time = 0;
+        let mut tsdb = TSDB::new().unwrap();
         let delta_time = (self.lats_time - self.first_time) / self.num_reports;
         for n in 0 .. self.num_reports - 1 {
             let mut report = Report::default();
             report.id_parameter = mib.id_db;
             report.data_start = self.first_time + delta_time * (n as i64);
-            report.pull_sql_up()?;
+            tsdb.pull_sql_up(&mut report)?;
 
             if last_report_time != report.data_start {
                 let devision = mib.devision;
