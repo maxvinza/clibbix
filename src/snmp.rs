@@ -20,9 +20,11 @@ use snmp::{
 };
 
 use tsdb::{
-    TSDB,
-    TSDBError,
+    RRDB,
+    RRDBError,
     Report,
+    ReportData,
+    ReportId,
 };
 
 use crate::config::Config;
@@ -33,7 +35,7 @@ pub enum SNMPError {
     #[error_from("Config IO: {}", 0)]
     Io(io::Error),
     #[error_from("Config: {}", 0)]
-    TSDB(TSDBError),
+    RRDB(RRDBError),
     #[error_from("Config: {}", 0)]
     SystemTime(SystemTimeError),
 }
@@ -47,7 +49,7 @@ const TIMEOUT: Duration = Duration::from_secs(2);
 
 pub fn snmp_loop(config: &Config) -> Result<()> {
     let sleep_time = Duration::from_secs(config.loop_time.try_into().unwrap_or(60));
-    let mut tsdb = TSDB::new().unwrap();
+    let mut rrdb = RRDB::new("base.rr").unwrap();
 
     loop {
         for device in &config.devices {
@@ -80,11 +82,18 @@ pub fn snmp_loop(config: &Config) -> Result<()> {
                     println!("output: {}", snmp_response);
                     let unix_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
 
-                    let mut report = Report::default();
-                    report.data_start = unix_time.as_secs() as i64;
-                    report.data = snmp_response;
-                    report.id_parameter = mib.id_db;
-                    tsdb.push_sql(&mut report)?;
+                    let report = Report {
+                        id: ReportId {
+                            parameter: mib.id,
+                            object: device.id,
+                        },
+                        data: ReportData {
+                            start: unix_time.as_secs() as usize,
+                            data: snmp_response,
+                        }
+                    };
+
+                    rrdb.push_report(report)?;
                 }
             }
         }

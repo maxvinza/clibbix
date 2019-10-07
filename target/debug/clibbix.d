@@ -1,0 +1,1 @@
+/home/max/rust/clibbix/target/debug/clibbix: /home/max/rust/clibbix/src/config.rs /home/max/rust/clibbix/src/main.rs /home/max/rust/clibbix/src/output.rs /home/max/rust/clibbix/src/snmp.rs /home/max/rust/libtsdb/src/config.rs /home/max/rust/libtsdb/src/lib.rs /home/max/rust/libtsdb/src/object.rs /home/max/rust/libtsdb/src/rrd.rs

@@ -15,12 +15,12 @@ use std::{
     }
 };
 use tsdb::{
-    TSDB,
-    TSDBError,
-    Report,
+    RRDB,
+    RRDBError,
 };
 
 use crate::config::{
+    Device,
     Config,
     Mib,
 };
@@ -31,7 +31,7 @@ pub enum OutputError {
     #[error_from("Output IO: {}", 0)]
     Io(io::Error),
     #[error_from("Output: {}", 0)]
-    TSDB(TSDBError),
+    RRDB(RRDBError),
     #[error_from("Config: {}", 0)]
     SystemTime(SystemTimeError),
     #[error_from("Config: {}", 0)]
@@ -46,15 +46,15 @@ pub struct PrintOption {
     pub need_print: bool,
     pub device: String,
     pub parameter: String,
-    first_time: i64,
-    lats_time: i64,
-    num_reports: i64,
+    first_time: usize,
+    lats_time: usize,
+    num_reports: usize,
 }
 
 
 impl PrintOption {
     pub fn new() -> Result<Self> {
-        let lats_time = unix_time()?;
+        let lats_time = unix_time()? as usize;
         let first_time = lats_time - 3600;
         Ok(Self {
             need_print: false,
@@ -66,8 +66,8 @@ impl PrintOption {
         })
     }
 
-    pub fn set_time(&mut self, time: i64) -> Result<()> {
-        self.lats_time = unix_time()?;
+    pub fn set_time(&mut self, time: usize) -> Result<()> {
+        self.lats_time = unix_time()? as usize;
         self.first_time = self.lats_time - time * 60;
         Ok(())
     }
@@ -83,10 +83,10 @@ impl PrintOption {
                     for mib in &device.mibs {
                         if parameter == "" {
                             println!("Device: {}", device.ip);
-                            if let Err(_e) = self.printreport(mib) { break; }
+                            if let Err(_e) = self.printreport(mib, device) { break; }
                         } else if parameter == &mib.name {
                             println!("Device: {}", device.ip);
-                            if let Err(_e) = self.printreport(mib) { break; }
+                            if let Err(_e) = self.printreport(mib, device) { break; }
                         }
                     }
                     break;
@@ -95,26 +95,24 @@ impl PrintOption {
         }
     }
 
-    pub fn printreport(&mut self, mib: &Mib) -> Result<()> {
+    pub fn printreport(&mut self, mib: &Mib, device: &Device) -> Result<()> {
         println!("Parameter: {}", mib.name);
         let mut last_report_time = 0;
-        let mut tsdb = TSDB::new().unwrap();
+        let mut rrdb = RRDB::new("base.rr").unwrap();
         let delta_time = (self.lats_time - self.first_time) / self.num_reports;
         for n in 0 .. self.num_reports - 1 {
-            let mut report = Report::default();
-            report.id_parameter = mib.id_db;
-            report.data_start = self.first_time + delta_time * (n as i64);
-            tsdb.pull_sql_up(&mut report)?;
+            let ts =  self.first_time + delta_time * n;
+            let report = rrdb.pull_report(mib.id, device.id, ts)?;
 
-            if last_report_time != report.data_start {
+            if last_report_time != report.data.start {
                 let devision = mib.devision;
 
-                let d = UNIX_EPOCH + Duration::from_secs(report.data_start.try_into()?);
+                let d = UNIX_EPOCH + Duration::from_secs(report.data.start.try_into()?);
                 let datetime = DateTime::<Utc>::from(d);
                 // Formats the combined date and time with the specified format string.
                 let timestamp_str = datetime.format("%Y-%m-%d %H:%M:%S").to_string();
-                println!("{} -> {}", timestamp_str, report.data as f32 / devision as f32);
-                last_report_time = report.data_start;
+                println!("{} -> {}", timestamp_str, report.data.data as f32 / devision as f32);
+                last_report_time = report.data.start;
             }
         }
         Ok(())
