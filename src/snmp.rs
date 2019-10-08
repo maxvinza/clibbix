@@ -88,7 +88,7 @@ pub fn snmp_loop(config: &Config) -> Result<()> {
                             object: device.id,
                         },
                         data: ReportData {
-                            start: unix_time.as_secs() as usize,
+                            start: unix_time.as_secs(),
                             data: snmp_response,
                         }
                     };

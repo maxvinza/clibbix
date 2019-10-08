@@ -101,13 +101,13 @@ impl PrintOption {
         let mut rrdb = RRDB::new("base.rr").unwrap();
         let delta_time = (self.lats_time - self.first_time) / self.num_reports;
         for n in 0 .. self.num_reports - 1 {
-            let ts =  self.first_time + delta_time * n;
+            let ts =  (self.first_time + delta_time * n) as u64;
             let report = rrdb.pull_report(mib.id, device.id, ts)?;
 
             if last_report_time != report.data.start {
                 let devision = mib.devision;
 
-                let d = UNIX_EPOCH + Duration::from_secs(report.data.start.try_into()?);
+                let d = UNIX_EPOCH + Duration::from_secs(report.data.start);
                 let datetime = DateTime::<Utc>::from(d);
                 // Formats the combined date and time with the specified format string.
                 let timestamp_str = datetime.format("%Y-%m-%d %H:%M:%S").to_string();

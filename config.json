@@ -1,0 +1,23 @@
+[
+    {
+	"id":1,
+	"ip":"127.0.0.1",
+	"community":"public",
+	"mibs":[
+	    {
+		"id":1,
+		"name":"Uptime",
+		"units":"seconds",
+		"oid":[1,3,6,1,2,1,1,3],
+		"devision":1
+	    },
+	    {
+		"id":2,
+		"name":"Uptime",
+		"units":"seconds",
+		"oid":[1,3,6,1,2,1,1,3],
+		"devision":1
+	    },
+	]
+    },
+]
