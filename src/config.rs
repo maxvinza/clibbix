@@ -1,30 +1,30 @@
 use std::{
     io::{
         self,
-        BufRead,
         BufReader,
+        BufWriter
     },
-    fs::File,
+    fs::{
+        File,
+        OpenOptions,
+    }
 };
-
-use tsdb::{
-    TSDB,
-    TSDBError,
-    Parameter,
-    ParameterType,
-    Object,
+use serde::{
+    Deserialize,
+    Serialize
 };
 
 
 #[derive(Debug, Default)]
 pub struct Config {
     pub devices: Vec<Device>,
-    pub loop_time: i64,
+    pub loop_time: usize,
 }
 
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Device {
+    pub id: u32,
     pub ip: String,
     pub community: String,
     pub mibs: Vec<Mib>,
@@ -32,24 +32,24 @@ pub struct Device {
 
 ///Stuct of one parameter of monitoring
 ///devision - coefficient by which reports are divided
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Mib {
+    pub id: u32,
     pub name: String,
-    units: String,
+    pub units: String,
     pub oid: Vec<u32>,
     pub devision: i64,
-    pub id_db: i64,
 }
 
 
 impl Default for Mib {
     fn default() -> Self {
         Self {
+            id: 0,
             name: String::default(),
             units: String::default(),
             oid: Vec::new(),
             devision: 1,
-            id_db: 0,
         }
     }
 }
@@ -59,90 +59,89 @@ impl Default for Mib {
 pub enum ConfigError {
     #[error_from("Config IO: {}", 0)]
     Io(io::Error),
-    #[error_from("Config: {}", 0)]
-    TSDB(TSDBError),
+    #[error_from("Config JSON: {}", 0)]
+    JSON(serde_json::error::Error),
 }
 
 
 pub type Result<T> = std::result::Result<T, ConfigError>;
 
 
+const FILE: &str = "config.json";
+
+
 impl Config {
-    pub fn new() -> Result<Self> {
-        let f = File::open("config.cfg")?;
-        let mut reader = BufReader::new(f);
-        let mut buffer = String::new();
-        let mut device = Device::default();
-        let mut is_first = true;
-        let mut config = Config::default();
-        config.loop_time = 60;//default polling interval
-        loop {
-            buffer.clear();
-            if reader.read_line(&mut buffer)? == 0 {
-                break;
+    pub fn load_json(&mut self) -> Result<()> {
+        let file = match File::open(FILE) {
+            Ok(v) => v,
+            _ => {
+                self.example_config()?;
+                return Ok(());
             }
+        };
 
-            buffer = String::from(buffer.trim());
-            if buffer.starts_with("dev") {
-                if ! is_first {
-                    config.devices.push(device);
-                    device = Device::default();
-                } else {
-                    is_first = false;
-                }
-
-                let mut i = buffer[4 ..].split(' ');
-
-                device.ip = String::from(i.next().unwrap_or(""));
-                device.community = String::from(i.next().unwrap_or(""));
-            } else {
-                let mut mib = Mib::default();
-                for a in buffer.split(' ') {
-                    let mut i = a.split('=');
-                    let key = i.next().unwrap_or("");
-                    let value = i.next().unwrap_or("");
-
-                    match key {
-                        "name" => mib.name = String::from(value),
-                        "oid" => {
-                            for a in value.split('.') {
-                                let elemet = a.parse::<u32>().unwrap_or(0);
-                                mib.oid.push(elemet);
-                            }
-                        },
-                        "units" => mib.units = String::from(value),
-                        "devision" => mib.devision = value.parse::<i64>().unwrap_or(1),
-                        _ => {},
-                    }
-                }
-                
-                if mib.name != String::default() {
-                    device.mibs.push(mib);
-                }
-            }
-        }
-        config.devices.push(device);
-        Ok(config)
+        let reader = BufReader::new(file);
+        self.devices = serde_json::from_reader(reader)?;
+        self.make_id();
+        Ok(())
     }
 
-    pub fn make_tsbd(&mut self) -> Result<()> {
+    fn example_config(&mut self) -> Result<()> {
+        let mib = Mib {
+            id: 0,
+            name: String::from("Uptime"),
+            units: String::from("seconds"),
+            oid: vec![1, 3, 6, 1, 2, 1, 1, 3],
+            devision: 1,
+        };
+
+        let device = Device {
+            id: 0,
+            ip: String::from("127.0.0.1"),
+            community: String::from("public"),
+            mibs: vec![mib],
+        };
+
+        self.devices.push(device);
+        self.make_id();
+        self.save_json()
+    }
+
+    pub fn make_id(&mut self) {
+        let mut max_device = 0;
+        let mut max_mib = 0;
         for device in &mut self.devices {
-            let mut tsdb = TSDB::new().unwrap();
-            tsdb.sql.new_base();
-            let mut object = Object::default();
-            object.name = device.ip.clone();
-            tsdb.push_sql(&mut object)?;
+            if device.id > max_device { max_device = device.id; }
+
             for mib in &mut device.mibs {
-                let mut parametertype = ParameterType::default();
-                parametertype.name = mib.name.clone();
-                parametertype.units = mib.units.clone();
-                parametertype.aproxy_time = 60;
-                tsdb.push_sql(&mut parametertype)?;
-                let mut parameter = Parameter::new(&parametertype, &object);
-                tsdb.push_sql(&mut parameter)?;
-                mib.id_db = parameter.id;
+                if mib.id > max_mib { max_mib = device.id; }
             }
         }
+
+        for device in &mut self.devices {
+            if device.id == 0 {
+                max_device += 1;
+                device.id = max_device;
+            }
+
+            for mib in &mut device.mibs {
+                if mib.id == 0 { 
+                    max_mib += 1;
+                    mib.id = max_mib;
+                }
+            }
+        }
+    }
+    
+    pub fn save_json(&self) -> Result<()> {
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(FILE)?;
+        
+        let mut writer = BufWriter::new(file);
+        serde_json::to_writer(&mut writer, &self.devices)?;
         Ok(())
     }
 }

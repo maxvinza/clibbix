@@ -17,10 +17,9 @@ pub use crate::output::*;
 
 
 fn main() {
-    let mut config = Config::new().unwrap();
+    let mut config = Config::default();
+    config.load_json().unwrap();
     let mut printoption = PrintOption::new().unwrap();
-
-    config.make_tsbd().unwrap();
 
     let mut wait_loop_time = false;
     let mut wait_dev_name = false;
@@ -31,7 +30,7 @@ fn main() {
         let argument = arg.as_str();
         match argument {
             "-h" => {
-                println!("clibbix - lite monitoring system\n \
+                println!("clibbix - lite monitoring system\n\
                 Usage for write: clibbix -i 60 [-config]\n\
                 where 60 - polling interval in seconds\n\
                 -config - option to print config file\n\
@@ -47,7 +46,7 @@ fn main() {
             "-t" => wait_print_time = true,
             "-p" => wait_parameter_name = true,
             _ => {
-                let mut parsed = argument.parse::<i64>().unwrap_or(0);
+                let mut parsed = argument.parse::<usize>().unwrap_or(0);
                 if parsed > 0 && wait_loop_time {
                     config.loop_time = parsed;
                     println!("INFO: set up loop_time {}", &config.loop_time);
