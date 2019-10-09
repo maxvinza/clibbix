@@ -3,14 +3,6 @@ use std::{
     process,
 };
 
-use tsdb::{
-    RRDB,
-    Object,
-    Parameter,
-    ConfigActions,
-};
-
-
 #[macro_use]
 extern crate error_rules;
 
@@ -25,31 +17,10 @@ pub use crate::output::*;
 
 
 fn main() {
-    let mut config = Config::default();
+    let mut config = Config::new().unwrap();
     config.load_json().unwrap();
+
     let mut printoption = PrintOption::new().unwrap();
-
-    let mut rrdb = RRDB::new("base.rr").unwrap();
-
-    for device in &config.devices {
-        let mut object = Object {
-            id: Some(device.id),
-            name: device.ip.clone(),
-        };
-
-        object.push(&mut rrdb.config);
-
-        for mib in &device.mibs {
-            let mut parameter = Parameter {
-                id: Some(mib.id),
-                name: mib.name.clone(),
-                units: mib.units.clone(),
-                aproxy_time: 1,
-            };
-
-            parameter.push(&mut rrdb.config);
-        }
-    }
 
     let mut wait_loop_time = false;
     let mut wait_dev_name = false;
@@ -63,7 +34,6 @@ fn main() {
                 println!("clibbix - lite monitoring system\n\
                 Usage for write: clibbix -i 60 [-config]\n\
                 where 60 - polling interval in seconds\n\
-                -config - option to print config file\n\
                 Usage for reading: clibbix -dev 192.168.88.1 [-p test] -t 60\n\
                 where dev - ip or name device\n\
                 -p (optional) - parameter name\n\
@@ -71,7 +41,6 @@ fn main() {
                 process::exit(1);
             },
             "-dev" => wait_dev_name = true,
-            "-config" => println!("{:#?}", &config),
             "-i" => wait_loop_time = true,
             "-t" => wait_print_time = true,
             "-p" => wait_parameter_name = true,
@@ -106,7 +75,7 @@ fn main() {
     }
 
     match printoption.need_print {
-        true => printoption.print_data(&config, rrdb),
-        false => snmp_loop(&config, rrdb).unwrap(),
+        true => printoption.print_data(&mut config),
+        false => snmp_loop(&mut config).unwrap(),
     }
 }

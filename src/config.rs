@@ -14,11 +14,19 @@ use serde::{
     Serialize
 };
 
+use tsdb::{
+    RRDB,
+    RRDBError,
+    Object,
+    Parameter,
+    ConfigActions,
+};
 
-#[derive(Debug, Default)]
+
 pub struct Config {
     pub devices: Vec<Device>,
     pub loop_time: usize,
+    pub rrdb: RRDB,
 }
 
 
@@ -61,6 +69,8 @@ pub enum ConfigError {
     Io(io::Error),
     #[error_from("Config JSON: {}", 0)]
     JSON(serde_json::error::Error),
+    #[error_from("Config RRDB: {}", 0)]
+    RRDB(RRDBError),
 }
 
 
@@ -71,6 +81,14 @@ const FILE: &str = "config.json";
 
 
 impl Config {
+    pub fn new ()->Result<Self> {
+        Ok(Self {
+            devices: Vec::new(),
+            loop_time: 0,
+            rrdb: RRDB::new("base.rr")?,
+        })
+    }
+
     pub fn load_json(&mut self) -> Result<()> {
         let file = match File::open(FILE) {
             Ok(v) => v,
@@ -83,6 +101,25 @@ impl Config {
         let reader = BufReader::new(file);
         self.devices = serde_json::from_reader(reader)?;
         self.make_id();
+        for device in &self.devices {
+            let mut object = Object {
+                id: Some(device.id),
+                name: device.ip.clone(),
+            };
+
+            object.push(&mut self.rrdb.config);
+
+            for mib in &device.mibs {
+                let mut parameter = Parameter {
+                    id: Some(mib.id),
+                    name: mib.name.clone(),
+                    units: mib.units.clone(),
+                    aproxy_time: 1,
+                };
+
+                parameter.push(&mut self.rrdb.config);
+            }
+        }
 
         Ok(())
     }

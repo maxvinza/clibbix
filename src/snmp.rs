@@ -20,7 +20,6 @@ use snmp::{
 };
 
 use tsdb::{
-    RRDB,
     RRDBError,
     Report,
     ReportData,
@@ -47,7 +46,7 @@ pub type Result<T> = std::result::Result<T, SNMPError>;
 const TIMEOUT: Duration = Duration::from_secs(2);
 
 
-pub fn snmp_loop(config: &Config, mut rrdb: RRDB) -> Result<()> {
+pub fn snmp_loop(config: &mut Config) -> Result<()> {
     let sleep_time = Duration::from_secs(config.loop_time.try_into().unwrap_or(60));
 
     loop {
@@ -92,7 +91,7 @@ pub fn snmp_loop(config: &Config, mut rrdb: RRDB) -> Result<()> {
                         }
                     };
 
-                    rrdb.push_report(report)?;
+                    config.rrdb.push_report(report)?;
                 }
             }
         }

@@ -72,7 +72,7 @@ impl PrintOption {
         Ok(())
     }
 
-    pub fn print_data(&mut self, config: &Config, mut rrdb: RRDB) {
+    pub fn print_data(&mut self, config: &mut Config) {
         let ip = self.device.as_str();
         let p = self.parameter.clone();
         let parameter = p.as_str();
@@ -83,10 +83,10 @@ impl PrintOption {
                     for mib in &device.mibs {
                         if parameter == "" {
                             println!("Device: {}", device.ip);
-                            if let Err(_e) = self.printreport(mib, device, &mut rrdb) { break; }
+                            if let Err(_e) = self.printreport(mib, device, &mut config.rrdb) { break; }
                         } else if parameter == &mib.name {
                             println!("Device: {}", device.ip);
-                            if let Err(_e) = self.printreport(mib, device, &mut rrdb) { break; }
+                            if let Err(_e) = self.printreport(mib, device, &mut config.rrdb) { break; }
                         }
                     }
                     break;
