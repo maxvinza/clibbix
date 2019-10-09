@@ -3,6 +3,14 @@ use std::{
     process,
 };
 
+use tsdb::{
+    RRDB,
+    Object,
+    Parameter,
+    ConfigActions,
+};
+
+
 #[macro_use]
 extern crate error_rules;
 
@@ -20,6 +28,28 @@ fn main() {
     let mut config = Config::default();
     config.load_json().unwrap();
     let mut printoption = PrintOption::new().unwrap();
+
+    let mut rrdb = RRDB::new("base.rr").unwrap();
+
+    for device in &config.devices {
+        let mut object = Object {
+            id: Some(device.id),
+            name: device.ip.clone(),
+        };
+
+        object.push(&mut rrdb.config);
+
+        for mib in &device.mibs {
+            let mut parameter = Parameter {
+                id: Some(mib.id),
+                name: mib.name.clone(),
+                units: mib.units.clone(),
+                aproxy_time: 1,
+            };
+
+            parameter.push(&mut rrdb.config);
+        }
+    }
 
     let mut wait_loop_time = false;
     let mut wait_dev_name = false;
@@ -76,7 +106,7 @@ fn main() {
     }
 
     match printoption.need_print {
-        true => printoption.print_data(&config),
-        false => snmp_loop(&config).unwrap(),
+        true => printoption.print_data(&config, rrdb),
+        false => snmp_loop(&config, rrdb).unwrap(),
     }
 }

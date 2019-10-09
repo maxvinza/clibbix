@@ -83,6 +83,7 @@ impl Config {
         let reader = BufReader::new(file);
         self.devices = serde_json::from_reader(reader)?;
         self.make_id();
+
         Ok(())
     }
 

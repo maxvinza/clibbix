@@ -72,7 +72,7 @@ impl PrintOption {
         Ok(())
     }
 
-    pub fn print_data(&mut self, config: &Config) {
+    pub fn print_data(&mut self, config: &Config, mut rrdb: RRDB) {
         let ip = self.device.as_str();
         let p = self.parameter.clone();
         let parameter = p.as_str();
@@ -83,10 +83,10 @@ impl PrintOption {
                     for mib in &device.mibs {
                         if parameter == "" {
                             println!("Device: {}", device.ip);
-                            if let Err(_e) = self.printreport(mib, device) { break; }
+                            if let Err(_e) = self.printreport(mib, device, &mut rrdb) { break; }
                         } else if parameter == &mib.name {
                             println!("Device: {}", device.ip);
-                            if let Err(_e) = self.printreport(mib, device) { break; }
+                            if let Err(_e) = self.printreport(mib, device, &mut rrdb) { break; }
                         }
                     }
                     break;
@@ -95,10 +95,9 @@ impl PrintOption {
         }
     }
 
-    pub fn printreport(&mut self, mib: &Mib, device: &Device) -> Result<()> {
+    pub fn printreport(&mut self, mib: &Mib, device: &Device, rrdb: &mut RRDB) -> Result<()> {
         println!("Parameter: {}", mib.name);
         let mut last_report_time = 0;
-        let mut rrdb = RRDB::new("base.rr").unwrap();
         let delta_time = (self.lats_time - self.first_time) / self.num_reports;
         for n in 0 .. self.num_reports - 1 {
             let ts =  (self.first_time + delta_time * n) as u64;
