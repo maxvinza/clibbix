@@ -25,6 +25,9 @@ use tsdb::{
     Report,
     ReportData,
     ReportId,
+    Object,
+    Parameter,
+    ConfigActions,
 };
 
 use crate::config::Config;
@@ -50,6 +53,26 @@ const TIMEOUT: Duration = Duration::from_secs(2);
 pub fn snmp_loop(config: &Config) -> Result<()> {
     let sleep_time = Duration::from_secs(config.loop_time.try_into().unwrap_or(60));
     let mut rrdb = RRDB::new("base.rr").unwrap();
+
+    for device in &config.devices {
+        let mut object = Object {
+            id: Some(device.id),
+            name: device.ip.clone(),
+        };
+
+        object.push(&mut rrdb.config);
+
+        for mib in &device.mibs {
+            let mut parameter = Parameter {
+                id: Some(mib.id),
+                name: mib.name.clone(),
+                units: mib.units.clone(),
+                aproxy_time: 1,
+            };
+
+            parameter.push(&mut rrdb.config);
+        }
+    }
 
     loop {
         for device in &config.devices {
