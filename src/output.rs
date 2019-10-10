@@ -17,6 +17,9 @@ use std::{
 use tsdb::{
     RRDB,
     RRDBError,
+    Report,
+    ReportId,
+    ReportData,
 };
 
 use crate::config::{
@@ -101,7 +104,19 @@ impl PrintOption {
         let delta_time = (self.lats_time - self.first_time) / self.num_reports;
         for n in 0 .. self.num_reports - 1 {
             let ts =  (self.first_time + delta_time * n) as u64;
-            let report = rrdb.pull_report(mib.id, device.id, ts)?;
+
+            let mut report = Report {
+                id: ReportId {
+                    parameter: mib.id,
+                    object: device.id,
+                },
+                data: ReportData{
+                    data: 0,
+                    start: ts,
+                },
+            };
+
+            rrdb.pull_report(&mut report)?;
 
             if last_report_time != report.data.start {
                 let devision = mib.devision;
