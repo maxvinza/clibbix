@@ -54,8 +54,6 @@ pub fn snmp_loop(config: &mut Config) -> Result<()> {
             let agent_addr = &format!("{}:161", &device.ip);
             let community = device.community.as_bytes();
             for mib in &device.mibs {
-                println!("Device:{}, oid:{}",  device.ip, mib.name);
-                
                 let mut sess = match SyncSession::new(agent_addr, community, Some(TIMEOUT), 0) {
                     Ok(v) => v,
                     _ => continue,
